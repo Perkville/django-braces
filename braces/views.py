@@ -504,8 +504,7 @@ class JSONResponseMixin(object):
         or other complex or custom objects.
         """
         json_context = json.dumps(context_dict, cls=DjangoJSONEncoder,
-                                  **self.get_json_dumps_kwargs()).encode(
-                                  u'utf-8')
+                                  **self.get_json_dumps_kwargs())
         return HttpResponse(json_context,
                             content_type=self.get_content_type(),
                             status=status)
