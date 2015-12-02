@@ -12,6 +12,7 @@ from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import redirect
 from django.utils.decorators import method_decorator
 from django.utils.encoding import force_text
+from django.utils.functional import Promise
 from django.views.decorators.csrf import csrf_exempt
 
 ## Django 1.5+ compat
@@ -19,6 +20,17 @@ try:
     import json
 except ImportError:  # pragma: no cover
     from django.utils import simplejson as json
+
+
+class LazyJSONEncoder(DjangoJSONEncoder):
+    """
+    This JSON encoder correctly handles "lazy"-style strings and objects,
+    including ugettext_lazy and format_lazy strings.
+    """
+    def default(self, obj):
+        if isinstance(obj, Promise):
+            return force_text(obj)
+        return super(LazyJSONEncoder, self).default(obj)
 
 
 class AccessMixin(object):
@@ -503,7 +515,7 @@ class JSONResponseMixin(object):
         Limited serialization for shipping plain data. Do not use for models
         or other complex or custom objects.
         """
-        json_context = json.dumps(context_dict, cls=DjangoJSONEncoder,
+        json_context = json.dumps(context_dict, cls=LazyJSONEncoder,
                                   **self.get_json_dumps_kwargs())
         return HttpResponse(json_context,
                             content_type=self.get_content_type(),
@@ -578,7 +590,7 @@ class JsonRequestResponseMixin(JSONResponseMixin):
             error_dict = self.error_response_dict
         json_context = json.dumps(
             error_dict,
-            cls=DjangoJSONEncoder,
+            cls=LazyJSONEncoder,
             **self.get_json_dumps_kwargs()
         ).encode(u'utf-8')
         return HttpResponseBadRequest(
